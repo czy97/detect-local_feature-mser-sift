@@ -2,7 +2,7 @@
 
 ## Require：
 - python 3.x 
-- cv2  
+- opencv-python  
 
 ## Reminding：
 When the code 'sift = cv2.xfeatures2d.SIFT_create()' is executed，some error may occur.  
