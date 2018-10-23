@@ -8,7 +8,7 @@ def loadImage(filename,flag = 0):
 
 
 def getMSERegions(img):
-    mser = cv2.MSER_create()
+    mser = cv2.MSER_create(_min_area=10,_max_area=200)#30 200
     regions, bboxes = mser.detectRegions(img)
     return regions, bboxes
 
@@ -22,12 +22,12 @@ def plotRegions(img,bboxes,drawType = 'Ellipse'):
     if(drawType == 'Rectangle'):
         for i in range(N):
             cv2.rectangle(img, (bboxes[i][0], bboxes[i][1]),
-                          (bboxes[i][0] + bboxes[i][2], bboxes[i][1] + bboxes[i][3]), (0, 255, 0), 3)
+                          (bboxes[i][0] + bboxes[i][2], bboxes[i][1] + bboxes[i][3]), (0, 255, 0), 2)
     if(drawType == 'Ellipse'):
         for i in range(N):
             center = (int(bboxes[i][0] + bboxes[i][2]/2.0),int(bboxes[i][1] + bboxes[i][3]/2.0))
             width = (int(bboxes[i][2]/2.0),int(bboxes[i][3]/2.0))
-            cv2.ellipse(img, center, width, 0, 0, 360, (0, 255, 0), 3)
+            cv2.ellipse(img, center, width, 0, 0, 360, (0, 255, 0), 2)
     return img
 
 
@@ -39,31 +39,53 @@ def colorRegion(img, region):
 def getSundirs(dir):
     subdirs = [os.path.join(dir,val) for val in os.listdir(dir)]
     return subdirs
+
 def getSubfiles(dir):
-    return glob.glob(os.path.join(dir,'*.ppm'))
+    return glob.glob(os.path.join(dir,'*.p[pg]m'))
+
+def siftProcess(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    sift = cv2.xfeatures2d.SIFT_create()
+    kp = sift.detect(gray, None)
+    cv2.drawKeypoints(img, kp, img, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    return img
+
 
 def processImages(dir,processType = 'mser'):
     '''
     process all images(with postfix .ppm) under a specific dir
     '''
     allFile = getSubfiles(dir)
+
+    seperator = '/'
+    if('\\' in allFile[0]):
+        seperator = '\\'
+
+    if(processType == 'mser'):
+        storeDir = os.path.join(dir,'mser')
+        if(not os.path.exists(storeDir)):
+            os.makedirs(storeDir)
+    elif(processType == 'sift'):
+        storeDir = os.path.join(dir, 'sift')
+        if (not os.path.exists(storeDir)):
+            os.makedirs(storeDir)
+
     if (processType == 'mser'):
         for filename in allFile:
-            imageName = filename.split('.')[0]
+            imageName = filename.split(seperator)[-1].split('.')[0]
             storeName = imageName + '_processed_mser.jpg'
+            storeName = os.path.join(storeDir,storeName)
             img = loadImage(filename, flag=1)
             regions, bboxes = getMSERegions(img)
             img = plotRegions(img, bboxes, drawType='Ellipse')
             cv2.imwrite(storeName, img)
-    else:
+    elif (processType == 'sift'):
         for filename in allFile:
-            imageName = filename.split('.')[0]
-            storeName = imageName + '_processed_sift.jpg'
+            imageName = filename.split(seperator)[-1].split('.')[0]
+            storeName = imageName + '_processed_mser.jpg'
+            storeName = os.path.join(storeDir, storeName)
             img = loadImage(filename, flag=1)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            sift = cv2.xfeatures2d.SIFT_create()
-            kp = sift.detect(gray, None)
-            cv2.drawKeypoints(img, kp, img)
+            img = siftProcess(img)
             cv2.imwrite(storeName, img)
 
 def processAllImages(dir,processType = 'mser'):
@@ -77,11 +99,19 @@ def processAllImages(dir,processType = 'mser'):
 
 
 if __name__ == '__main__':
-    # img = loadImage('data/trees/img1.ppm', flag=1)
+    # img = loadImage('data/bikes/img6.ppm', flag=1) #452 -> 256
     # regions, bboxes = getMSERegions(img)
+    # print(bboxes.shape)
+
+    # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # sift = cv2.xfeatures2d.SIFT_create()
+    # kp = sift.detect(gray, None) #3384 -> 373
+    # print(len(kp))
+
+
     #
-    # img = plotRegions(img,bboxes[1].reshape(1,4), drawType='Rectangle')
-    # img = plotRegions(img, bboxes[1].reshape(1,4), drawType='Ellipse')
+    # # img = plotRegions(img,bboxes, drawType='Rectangle')
+    # img = plotRegions(img, bboxes, drawType='Ellipse')
     #
     # cv2.imshow('image', img)
     # cv2.waitKey(0)
